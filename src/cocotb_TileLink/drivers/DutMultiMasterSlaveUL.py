@@ -3,7 +3,7 @@
 
 from typing import Any, Tuple, List, Dict
 
-from cocotb.handle import SimHandleBase # type: ignore
+from cocotb.handle import Immediate, SimHandleBase # type: ignore
 from cocotb.triggers import RisingEdge, ReadWrite, ReadOnly, Event, Combine, Timer # type: ignore
 
 from cocotb_bus.bus import Bus # type: ignore
@@ -87,12 +87,12 @@ class DutMultiMasterSlaveUL(SlaveUL):
                 if not bus.a_valid.value.is_resolvable or \
                     int(bus.a_valid.value) != int(a_valid):
                     modified = True
-                bus.a_valid.setimmediatevalue(int(a_valid))
+                bus.a_valid.set(Immediate(int(a_valid)))
                 for name in ('a_opcode', 'a_param', 'a_size', 'a_source', 'a_address', 'a_mask', 'a_data'):
                     if not getattr(bus, name).value.is_resolvable or \
                         int(getattr(bus, name).value) != int(getattr(a_packet, name)):
                         modified = True
-                    getattr(bus, name).setimmediatevalue(getattr(a_packet, name))
+                    getattr(bus, name).set(Immediate(getattr(a_packet, name)))
 
             if modified:
                 modified = False
@@ -122,7 +122,7 @@ class DutMultiMasterSlaveUL(SlaveUL):
                 if not bus.d_ready.value.is_resolvable or \
                     int(bus.d_ready.value) != int(d_ready):
                     modified = True
-                bus.d_ready.setimmediatevalue(d_ready)
+                bus.d_ready.set(Immediate(d_ready))
             if modified:
                 modified = False
                 await rw

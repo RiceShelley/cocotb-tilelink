@@ -74,7 +74,8 @@ class SimTrafficGeneratorUL(MasterUL, MasterInterfaceUL, SimInterface, Monitorab
     def is_reset(self) -> bool:
         if not self.reset.value.is_resolvable:
             return True
-        return bool(self.reset.value ^ self.inverted)
+        import cocotb.types
+        return bool(self.reset.value) ^ self.inverted
 
     async def get_status(self) -> TLMonitor:
         await self.all_done_event.wait()

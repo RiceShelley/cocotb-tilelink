@@ -63,7 +63,7 @@ class SimCheckInvalidSlaveUL(SimInterface, SlaveUL, SlaveInterfaceUL, MemoryInte
     def is_reset(self) -> bool:
         if not self.reset.value.is_resolvable:
             return True
-        return bool(self.reset.value ^ self.inverted)
+        return bool(self.reset.value) ^ self.inverted
 
     async def get_D_packet_and_valid(self) -> Tuple[TileLinkDPacket, bool]:
         await self.d_packet_and_valid_event.wait()

@@ -5,7 +5,7 @@ from __future__ import annotations
 from abc import ABC
 from typing import TypeVar, Any, Optional, Tuple, List
 
-from cocotb.handle import SimHandle # type: ignore
+from cocotb.handle import SimHandleBase # type: ignore
 from cocotb.triggers import Event # type: ignore
 
 from cocotb_TileLink.TileLink_common.TileLink_types import *
@@ -20,10 +20,10 @@ class SimInterface():
     def __init__(self) -> None:
         self.sim_finish_event: Event = Event()
 
-    def register_reset(self: T, rst: SimHandle, inverted: bool) -> T:
+    def register_reset(self: T, rst: SimHandleBase, inverted: bool) -> T:
         raise Exception("Unimplemented")
 
-    def register_clk(self: T, clk: SimHandle) -> T:
+    def register_clk(self: T, clk: SimHandleBase) -> T:
         raise Exception("Unimplemented")
 
     def finish(self) -> None:

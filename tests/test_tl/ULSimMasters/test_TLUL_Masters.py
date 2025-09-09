@@ -5,8 +5,8 @@ import warnings
 
 import cocotb # type: ignore
 from cocotb.clock import Clock # type: ignore
-from cocotb.handle import SimHandle, SimHandleBase # type: ignore
-from cocotb.triggers import ClockCycles, Combine, Join, RisingEdge # type: ignore
+from cocotb.handle import SimHandleBase # type: ignore
+from cocotb.triggers import ClockCycles, Combine, RisingEdge # type: ignore
 
 from cocotb_TileLink.TileLink_common.TileLink_types import*
 from cocotb_TileLink.TileLink_common.Interfaces import MemoryInterface
@@ -75,14 +75,14 @@ def conver_to_int_list(rsp: List[TileLinkDPacket], base_address: int, bus_byte_w
     return ans
 
 
-def get_parameters(dut: SimHandle) -> Tuple[int, int]:
-    address_width = dut.TL_AW.value
-    data_width    = dut.TL_DW.value
+def get_parameters(dut: SimHandleBase) -> Tuple[int, int]:
+    address_width = dut.TL_AW.value.to_unsigned()
+    data_width    = dut.TL_DW.value.to_unsigned()
     return address_width, data_width
 
 
-async def setup_dut(dut: SimHandle) -> None:
-    cocotb.fork(Clock(dut.clk, *CLK_PERIOD).start())
+async def setup_dut(dut: SimHandleBase) -> None:
+    cocotb.start_soon(Clock(dut.clk, *CLK_PERIOD).start())
     dut.rstn.value = 0
     await ClockCycles(dut.clk, 100)
     dut.rstn.value = 1
@@ -119,7 +119,7 @@ async def init_random_data(TLm: SimSimpleMasterUL, TLs: MemoryInterface, size: i
 
 
 @cocotb.test() # type: ignore
-async def test_single_master_simple_slave(dut: SimHandle) -> None:
+async def test_single_master_simple_slave(dut: SimHandleBase) -> None:
     address_width, bus_width = get_parameters(dut)
     bus_byte_width = bus_width//8
     TLm = SimSimpleMasterUL(bus_width)
@@ -130,8 +130,8 @@ async def test_single_master_simple_slave(dut: SimHandle) -> None:
     TLs.register_master(TLm.get_master_interface())
     TLm.register_slave(TLs.get_slave_interface())
 
-    cocotb.fork(TLs.process())
-    cocotb.fork(TLm.process())
+    cocotb.start_soon(TLs.process())
+    cocotb.start_soon(TLm.process())
 
     await setup_dut(dut)
     mem_init(TLs, 0x8000)
@@ -160,7 +160,7 @@ async def test_single_master_simple_slave(dut: SimHandle) -> None:
 
 
 @cocotb.test() # type: ignore
-async def test_trafic_generator_simple_slave(dut: SimHandle) -> None:
+async def test_trafic_generator_simple_slave(dut: SimHandleBase) -> None:
     address_width, bus_width = get_parameters(dut)
     bus_byte_width = bus_width//8
     TLm = SimTrafficGeneratorUL(bus_width=bus_width, addr_width=address_width, num_of_transactions=int(2e4))
@@ -172,15 +172,15 @@ async def test_trafic_generator_simple_slave(dut: SimHandle) -> None:
     TLs.register_master(TLm.get_master_interface())
     TLm.register_slave(TLs.get_slave_interface())
 
-    cocotb.fork(TLs.process())
-    cocotb.fork(TLm.process())
+    cocotb.start_soon(TLs.process())
+    cocotb.start_soon(TLm.process())
 
     await setup_dut(dut)
     await TLm.sim_finished()
 
 
 @cocotb.test() # type: ignore
-async def test_random_trafic_master_check_invalid_slave(dut: SimHandle) -> None:
+async def test_random_trafic_master_check_invalid_slave(dut: SimHandleBase) -> None:
     address_width, bus_width = get_parameters(dut)
     bus_byte_width = bus_width//8
     TLm = SimRandomTrafficGeneratorUL(bus_width=bus_width, addr_width=address_width)
@@ -191,30 +191,30 @@ async def test_random_trafic_master_check_invalid_slave(dut: SimHandle) -> None:
     TLs.register_master(TLm.get_master_interface())
     TLm.register_slave(TLs.get_slave_interface())
 
-    cocotb.fork(TLs.process())
-    cocotb.fork(TLm.process())
+    cocotb.start_soon(TLs.process())
+    cocotb.start_soon(TLm.process())
 
     await setup_dut(dut)
     await TLm.sim_finished()
 
 
 @cocotb.test() # type: ignore
-async def test_TileLinkUL_monitor(dut: SimHandle) -> None:
+async def test_TileLinkUL_monitor(dut: SimHandleBase) -> None:
     address_width, bus_width = get_parameters(dut)
     bus_byte_width = bus_width//8
 
     TLm = SimSimpleMasterUL().register_clock(dut.clk).register_reset(dut.rstn, True)
     TLmonitor = TileLinkULMonitor().register_clock(dut.clk).register_reset(dut.rstn, True)
     TLmonitor.register_device(TLm)
-    cocotb.fork(TLmonitor.process())
+    cocotb.start_soon(TLmonitor.process())
 
     TLs = SimSimpleSlaveUL(bus_width, 0x8000)
     TLs.register_clock(dut.clk).register_reset(dut.rstn, True)
     TLs.register_master(TLm.get_master_interface())
     TLm.register_slave(TLs.get_slave_interface())
 
-    cocotb.fork(TLs.process())
-    cocotb.fork(TLm.process())
+    cocotb.start_soon(TLs.process())
+    cocotb.start_soon(TLm.process())
 
     warnings.simplefilter("ignore")
     await setup_dut(dut)

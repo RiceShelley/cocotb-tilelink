@@ -1,11 +1,11 @@
 # Copyright (c) 2022, Antmicro
 # SPDX-License-Identifier: Apache-2.0
 
+import logging
 from typing import Any, Set, TypeVar, Dict
 
 from cocotb.handle import SimHandleBase # type: ignore
 from cocotb.triggers import RisingEdge, ReadOnly # type: ignore
-from cocotb.log import SimLog # type: ignore
 
 from cocotb_TileLink.TileLink_common.Interfaces import SimInterface, ProcessInterface
 from cocotb_TileLink.TileLink_common.MonitorInterfaces import MonitorInterface, MonitorableInterface, Packet
@@ -15,7 +15,7 @@ T = TypeVar('T')
 
 class TileLinkULMonitor(MonitorInterface, SimInterface, ProcessInterface):
     def __init__(self, name: str ="TLULMonitor"):
-        self.log: SimLog = SimLog(f"cocotb.{name}")
+        self.log = logging.getLogger(f"cocotb.{name}")
         self.waiting_for_resp: Dict[int, Packet] = {}
 
     def register_device(self: T, device: MonitorableInterface) -> T:
@@ -32,7 +32,7 @@ class TileLinkULMonitor(MonitorInterface, SimInterface, ProcessInterface):
         return self
 
     def is_reset(self) -> bool:
-        return bool(self.reset.value ^ self.inverted)
+        return bool(self.reset.value) ^ self.inverted
 
     async def process(self) -> None:
         ce = RisingEdge(self.clock)

@@ -2,9 +2,9 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from random import choice
+import logging
 from typing import List, Tuple, Dict, Union, Set, Optional, TypeVar, Any
 
-from cocotb.log import SimLog # type: ignore
 from cocotb.handle import SimHandleBase # type: ignore
 from cocotb.triggers import ReadWrite, RisingEdge, Event, ReadOnly # type: ignore
 
@@ -23,7 +23,7 @@ class SimSimpleMasterUL(SimInterface, MasterUL, MasterInterfaceUL, MonitorableIn
 
         self.max_slave_count = 1
         self.slaves: List[SlaveInterfaceUL] = []
-        self.log: SimLog = SimLog(f"cocotb.{name}")
+        self.log = logging.getLogger(f"cocotb.{name}")
         self.bus_byte_width = bus_width//8
 
         self.a_packet_queue: Dict[int, List[TileLinkAPacket]] = {}
@@ -81,7 +81,7 @@ class SimSimpleMasterUL(SimInterface, MasterUL, MasterInterfaceUL, MonitorableIn
     def is_reset(self) -> bool:
         if not self.reset.value.is_resolvable:
             return True
-        return bool(self.reset.value ^ self.inverted)
+        return bool(self.reset.value) ^ self.inverted
 
     async def get_status(self) -> TLMonitor:
         await self.all_done_event.wait()

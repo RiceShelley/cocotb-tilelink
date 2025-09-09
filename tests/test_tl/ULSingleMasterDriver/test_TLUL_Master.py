@@ -5,9 +5,8 @@ import warnings
 
 import cocotb # type: ignore
 from cocotb.clock import Clock # type: ignore
-from cocotb.handle import SimHandle, SimHandleBase # type: ignore
-from cocotb.regression import TestFactory # type: ignore
-from cocotb.triggers import ClockCycles, Combine, Join, RisingEdge # type: ignore
+from cocotb.handle import SimHandleBase # type: ignore
+from cocotb.triggers import ClockCycles, Combine, RisingEdge # type: ignore
 
 from cocotb_TileLink.TileLink_common.TileLink_types import*
 
@@ -112,14 +111,14 @@ def conver_to_int_list(rsp: List[TileLinkDPacket], base_address: int, bus_byte_w
     return ans
 
 
-def get_parameters(dut: SimHandle) -> Tuple[int, int]:
-    address_width = dut.TL_AW.value
-    data_width    = dut.TL_DW.value
+def get_parameters(dut: SimHandleBase) -> Tuple[int, int]:
+    address_width = dut.TL_AW.value.to_unsigned()
+    data_width    = dut.TL_DW.value.to_unsigned()
     return address_width, data_width
 
 
-async def setup_dut(dut: SimHandle) -> None:
-    cocotb.fork(Clock(dut.clk, *CLK_PERIOD).start())
+async def setup_dut(dut: SimHandleBase) -> None:
+    cocotb.start_soon(Clock(dut.clk, *CLK_PERIOD).start())
     dut.rstn.value = 0
     await ClockCycles(dut.clk, 100)
     dut.rstn.value = 1
@@ -137,7 +136,13 @@ async def init_random_data(TLm: SimSimpleMasterUL, data_byte_width: int) -> None
 
 
 used: bool = False
-async def test_single_master_sizes(dut: SimHandle, read_size: int, write_size: int) -> None:
+
+@cocotb.test()
+@cocotb.parametrize(
+    read_size=[0, 1, 2],
+    write_size=[0, 1, 2]
+)
+async def test_single_master_sizes(dut: SimHandleBase, read_size: int, write_size: int) -> None:
     await setup_dut(dut)
     address_width, bus_width = get_parameters(dut)
     bus_byte_width = bus_width//8
@@ -148,8 +153,8 @@ async def test_single_master_sizes(dut: SimHandle, read_size: int, write_size: i
     TLm.register_slave(TLs.get_slave_interface())
     TLs.register_master(TLm.get_master_interface())
 
-    cocotb.fork(TLs.process())
-    cocotb.fork(TLm.process())
+    cocotb.start_soon(TLs.process())
+    cocotb.start_soon(TLm.process())
 
     global used
     if not used:
@@ -185,7 +190,12 @@ async def test_single_master_sizes(dut: SimHandle, read_size: int, write_size: i
     await TLm.sim_finished()
 
 
-async def test_multiple_masters(dut: SimHandle, num: int = 4, multiply: int = 1) -> None:
+@cocotb.test()
+@cocotb.parametrize(
+    num=[2, 4, 6, 8],
+    multiply=[2, 2, 4, 6, 8, 10]
+)
+async def test_multiple_masters(dut: SimHandleBase, num: int = 4, multiply: int = 1) -> None:
     await setup_dut(dut)
     address_width, bus_width = get_parameters(dut)
     bus_byte_width = bus_width//8
@@ -196,8 +206,8 @@ async def test_multiple_masters(dut: SimHandle, num: int = 4, multiply: int = 1)
     TLm.register_slave(TLs.get_slave_interface())
     TLs.register_master(TLm.get_master_interface())
 
-    cocotb.fork(TLs.process())
-    cocotb.fork(TLm.process())
+    cocotb.start_soon(TLs.process())
+    cocotb.start_soon(TLm.process())
 
     addresses = [randrange((i%2)*0x4000, 0x4000*(1+i%2) - bus_byte_width * multiply) for i in range(num)]
 
@@ -244,17 +254,3 @@ async def test_multiple_masters(dut: SimHandle, num: int = 4, multiply: int = 1)
                                         read_value, address)
     TLm.finish()
     await TLm.sim_finished()
-
-
-
-
-single_master_sizes = TestFactory(test_single_master_sizes)
-single_master_sizes.add_option('read_size', (0,1,2))
-single_master_sizes.add_option('write_size', (0,1,2))
-single_master_sizes.generate_tests()
-
-
-multiple_masters = TestFactory(test_multiple_masters)
-multiple_masters.add_option('num', (2,4,6,8))
-multiple_masters.add_option('multiply', (2,2,4,6,8,10))
-multiple_masters.generate_tests()
